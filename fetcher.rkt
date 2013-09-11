@@ -19,12 +19,12 @@
     (regexp-match* p src #:match-select cadr)))
 
 ; Extract author name from source HTML.
-; If not possible, return #f
+; If not possible, return the empty string.
 (define (get-author-name src)
   (let* ([p #rx"By <a href=\".*?\">([a-zA-Z0-9-]*?)</a>"]
          [result (regexp-match p src)])
     (if (false? result)
-        result
+        ""
         (second result))))
 
 (define (download-images image-urls author album-name path)
@@ -78,12 +78,9 @@
   (define-values (base-path album-url) (assemble-command-line-flags))
   
   (let* ([src (get-source album-url)]
-         [urls (extract-full-res-urls src)]
-         [author (get-author-name src)]
-         [album-name (get-album-name album-url)])
-
-    (when (false? author)
-      (set! author ""))
-    (let ([final-download-path (download-images urls author album-name base-path)])
-      (printf "Downloaded album '~a' to ~a~n"
-              (get-album-name album-url) final-download-path))))
+         [final-download-path (download-images (extract-full-res-urls src)
+                                               (get-author-name src)
+                                               (get-album-name album-url)
+                                               base-path)])
+    (printf "Downloaded album '~a' to ~a~n"
+            (get-album-name album-url) final-download-path)))
