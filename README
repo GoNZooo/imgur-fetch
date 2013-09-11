@@ -3,3 +3,6 @@ Tool for downloading imgur albums.
 Usage:
     racket fetcher.rkt <imgur-album-url>
 
+Flags:
+	"--directory", "-d"	Specify base download directory.
+	"--help", "-h" 		Help.

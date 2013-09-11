@@ -69,7 +69,7 @@
      "imgur-fetch"
      
      #:once-each
-     [("-d" "--directory") ; list-of flags
+     [("--directory" "-d") ; list-of flags
       download-directory ; variable to put it in
       "Set download directory" ; help-text
       (set! path download-directory)] ; S-exp to eval if flag is present
