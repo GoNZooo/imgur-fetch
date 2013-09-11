@@ -22,31 +22,41 @@
    #:match-select cadr))
 
 (define (get-author-name src)
-  (second (regexp-match
-           #rx"By <a href=\".*?\">([a-zA-Z0-9-]*?)</a>"
-           src)))
+  (let ([result (regexp-match
+                 #rx"By <a href=\".*?\">([a-zA-Z0-9-]*?)</a>"
+                 src)])
+    (if (false? result)
+        result
+        (second result))))
 
-(define (download-images image-urls author path)
+(define (download-images image-urls author album-name path)
 
-  (define (create-author-directory)
-    (when (not (directory-exists? (build-path path author)))
-      (make-directory (build-path path author))))
+  (define album-path "")
+  (if (equal? author "")
+      (set! album-path (build-path path album-name))
+      (set! album-path (build-path path author album-name)))
+  
+  (define (create-directories)
+    (make-directory* album-path)) 
   
   (define (download-file url)
     (define (get-file-bytes)
       (call/input-url (string->url url) get-pure-port port->bytes))
+    
     (define filename (last (string-split url "/")))
   
-    (if (equal? filename " ")
-        #f
-        (call-with-output-file (build-path path author filename)
-          (lambda (output-port) (write-bytes (get-file-bytes) output-port))
-          #:exists 'replace)))
+    (call-with-output-file (build-path album-path filename)
+      (lambda (output-port) (write-bytes (get-file-bytes) output-port))
+      #:exists 'replace))
 
-  (create-author-directory)
+  (create-directories)
   (for-each (lambda (image-url)
               (download-file image-url))
-            image-urls))
+            image-urls)
+  album-path)
+
+(define (get-album-name album-url)
+  (last (string-split album-url "/")))
 
 (module+ main
   ; Set our current path to the base path
@@ -69,6 +79,12 @@
   
   (let* ([src (get-source album-url)]
          [urls (extract-full-res-urls src)]
-         [author (get-author-name src)])
+         [author (get-author-name src)]
+         [album-name (get-album-name album-url)])
 
-    (download-images urls author path)))
+    (when (false? author)
+      (set! author ""))
+    (let ([final-download-path (download-images urls author album-name path)])
+      (printf "Downloaded album '~a' to ~a~n"
+              (get-album-name album-url) final-download-path))))
+             

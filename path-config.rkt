@@ -4,7 +4,7 @@
          get-download-base-path)
 
 (define download-base-path
-  "~/Pictures/")
+  "~/Pictures/imgur-fetch/")
 
 (define (get-download-base-path)
   (expand-user-path download-base-path))
