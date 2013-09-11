@@ -31,7 +31,6 @@
         (second result))))
 
 (define (download-images image-urls author album-name path)
-
   (define album-path "")
   (if (equal? author "")
       (set! album-path (build-path path album-name))
@@ -51,9 +50,7 @@
       #:exists 'replace))
 
   (create-directories)
-  (for-each (lambda (image-url)
-              (download-file image-url))
-            image-urls)
+  (for-each download-file image-urls)
   album-path)
 
 (define (get-album-name album-url)
