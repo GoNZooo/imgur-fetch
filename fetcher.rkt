@@ -1,7 +1,9 @@
 #lang racket
 
 (require net/url
-         racket/cmdline)
+         racket/cmdline
+
+         "path-config.rkt")
 
 ; Originally I'd hoped to use Racket's HTML parser to
 ; clean things up a little in this one, but it's not happening.
@@ -13,7 +15,7 @@
 (define (get-source url)
   (call/input-url (string->url url) get-pure-port port->string))
 
-(define (download-file url [path ""])
+(define (download-file url [path download-base-path])
   (define (get-file-bytes)
     (call/input-url (string->url url) get-pure-port port->bytes))
   (define filename (last (string-split url "/")))
@@ -21,8 +23,8 @@
   (if (equal? filename " ")
       #f
       (call-with-output-file (string-append path "/" filename)
-        (lambda (output-port) (write-bytes file-bytes output-port))
-        #:exists 'replace))))
+        (lambda (output-port) (write-bytes (get-file-bytes) output-port))
+        #:exists 'replace)))
 
 (define (extract-full-res-urls src)
   (regexp-match* #rx"href=\"([a-zA-Z0-9:/\\.]*?)\" target=\"_blank\">View full resolution</a>" src #:match-select cadr))
@@ -41,11 +43,27 @@
 
 (module+ main
 
-         (define album-url (command-line #:args (album-url) album-url))
-         
-         (let* ([src (get-source album-url)]
-                [urls (extract-full-res-urls src)]
-                [author (get-author-name src)])
+  ; Set our current path to the base path
+  ; in path-config.rkt, change if -d flag present
+  (define path download-base-path)
+  
+  (define album-url
+    (command-line
+     #:program
+     "imgur-fetch"
+     
+     #:once-each
+     [("-d" "--directory") ; list-of flags
+      download-directory ; variable to put it in
+      "Set download directory" ; help-text
+      (set! path download-directory)] ; S-exp to eval if flag is present
+     
+     #:args (album-url) ; general arg, always supplied and without flag
+     album-url)) ; always return album-url
+  
+  (let* ([src (get-source album-url)]
+         [urls (extract-full-res-urls src)]
+         [author (get-author-name src)])
 
-           (create-author-directory author)
-           (download-images urls author)))
+    (create-author-directory author)
+    (download-images urls author)))
