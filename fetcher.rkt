@@ -2,6 +2,7 @@
 
 (require net/url
          racket/cmdline
+         net/head
 
          "path-config.rkt")
 
@@ -15,7 +16,7 @@
   (call/input-url (string->url url) get-pure-port port->string))
 
 (define (extract-full-res-urls src)
-  (let ([p #rx"href=\"([a-zA-Z0-9:/\\.]*?)\" target=\"_blank\">View full resolution</a>"])
+  (let ([p #rx"href=\"(/download/[0-9A-Za-z]*?)\">Download full resolution</a>"])
     (regexp-match* p src #:match-select cadr)))
 
 ; Extract author name from source HTML.
@@ -35,19 +36,44 @@
   
   (define (create-directories)
     (make-directory* album-path))
-  
+
+
+  ; Had a really neat (call/input-url) function here before
+  ; but 'had to' (don't know) abandon it to inspect
+  ; the headers for type information.
   (define (download-file url)
     (define (get-file-bytes)
-      (call/input-url (string->url url) get-pure-port port->bytes))
+      (let* ([ip (get-impure-port (string->url url))]
+             [header (purify-port ip)]
+             [data (port->bytes ip)])
+        (close-input-port ip)
+        (values header data)))
     
-    (define filename (last (string-split url "/")))
-  
-    (call-with-output-file (build-path album-path filename)
-      (lambda (output-port) (write-bytes (get-file-bytes) output-port))
-      #:exists 'replace))
+    (define-values (header file-bytes) (get-file-bytes))
 
+    (define base-filename
+      (last (string-split url "/")))
+
+    (define (get-file-extension)
+      (define subtype
+        (last (string-split (extract-field "content-type" header) "/")))
+      (case subtype
+        [("jpeg") ".jpg"]
+        [("png") ".png"]
+        [("gif") ".gif"]
+        [else ".na"]))
+    
+    (call-with-output-file
+        (build-path album-path (string-append base-filename (get-file-extension)))
+      (lambda (output-port) (write-bytes file-bytes output-port))
+      #:exists 'replace))
+  
   (create-directories)
-  (for-each download-file image-urls)
+  (for-each
+   (lambda (dl-url)
+     (download-file (string-append "http://imgur.com/" dl-url)))
+   image-urls)
+  
   album-path)
 
 (define (get-album-name album-url)
