@@ -15,14 +15,14 @@
 (define (get-source url)
   (call/input-url (string->url url) get-pure-port port->string))
 
-(define (download-file url [path download-base-path])
+(define (download-file url author [path (get-download-base-path)])
   (define (get-file-bytes)
     (call/input-url (string->url url) get-pure-port port->bytes))
   (define filename (last (string-split url "/")))
   
   (if (equal? filename " ")
       #f
-      (call-with-output-file (string-append path "/" filename)
+      (call-with-output-file (build-path path author filename)
         (lambda (output-port) (write-bytes (get-file-bytes) output-port))
         #:exists 'replace)))
 
@@ -32,20 +32,19 @@
 (define (get-author-name src)
   (second (regexp-match #rx"By <a href=\".*?\">([a-zA-Z0-9-]*?)</a>" src)))
 
-(define (create-author-directory author)
-  (when (not (directory-exists? author))
-    (make-directory author)))
+(define (create-author-directory author [path (get-download-base-path)])
+  (when (not (directory-exists? (build-path path author)))
+    (make-directory (build-path path author))))
 
-(define (download-images image-urls author)
+(define (download-images image-urls author path)
   (for-each (lambda (image-url)
-              (download-file image-url author))
+              (download-file image-url author path))
             image-urls))
 
 (module+ main
-
   ; Set our current path to the base path
   ; in path-config.rkt, change if -d flag present
-  (define path download-base-path)
+  (define path (get-download-base-path))
   
   (define album-url
     (command-line
@@ -65,5 +64,5 @@
          [urls (extract-full-res-urls src)]
          [author (get-author-name src)])
 
-    (create-author-directory author)
-    (download-images urls author)))
+    (create-author-directory author path)
+    (download-images urls author path)))
