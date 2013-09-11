@@ -16,10 +16,15 @@
   (call/input-url (string->url url) get-pure-port port->string))
 
 (define (extract-full-res-urls src)
-  (regexp-match* #rx"href=\"([a-zA-Z0-9:/\\.]*?)\" target=\"_blank\">View full resolution</a>" src #:match-select cadr))
+  (regexp-match*
+   #rx"href=\"([a-zA-Z0-9:/\\.]*?)\" target=\"_blank\">View full resolution</a>"
+   src
+   #:match-select cadr))
 
 (define (get-author-name src)
-  (second (regexp-match #rx"By <a href=\".*?\">([a-zA-Z0-9-]*?)</a>" src)))
+  (second (regexp-match
+           #rx"By <a href=\".*?\">([a-zA-Z0-9-]*?)</a>"
+           src)))
 
 (define (download-images image-urls author path)
 
