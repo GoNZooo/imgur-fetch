@@ -15,29 +15,26 @@
   (call/input-url (string->url url) get-pure-port port->string))
 
 (define (extract-full-res-urls src)
-  (regexp-match*
-   #rx"href=\"([a-zA-Z0-9:/\\.]*?)\" target=\"_blank\">View full resolution</a>"
-   src
-   #:match-select cadr))
+  (let ([p #rx"href=\"([a-zA-Z0-9:/\\.]*?)\" target=\"_blank\">View full resolution</a>"])
+    (regexp-match* p src #:match-select cadr)))
 
 ; Extract author name from source HTML.
 ; If not possible, return #f
 (define (get-author-name src)
-  (let ([result (regexp-match
-                 #rx"By <a href=\".*?\">([a-zA-Z0-9-]*?)</a>"
-                 src)])
+  (let* ([p #rx"By <a href=\".*?\">([a-zA-Z0-9-]*?)</a>"]
+         [result (regexp-match p src)])
     (if (false? result)
         result
         (second result))))
 
 (define (download-images image-urls author album-name path)
-  (define album-path "")
-  (if (equal? author "")
-      (set! album-path (build-path path album-name))
-      (set! album-path (build-path path author album-name)))
+  (define album-path
+    (if (equal? author "")
+        (build-path path album-name)
+        (build-path path author album-name)))
   
   (define (create-directories)
-    (make-directory* album-path)) 
+    (make-directory* album-path))
   
   (define (download-file url)
     (define (get-file-bytes)
@@ -74,6 +71,7 @@
      
      #:args (album-url) ; general arg, always supplied and without flag
      album-url)) ; always return album-url
+  
   (values path album-url))
   
 (module+ main
