@@ -15,30 +15,32 @@
 (define (get-source url)
   (call/input-url (string->url url) get-pure-port port->string))
 
-(define (download-file url author [path (get-download-base-path)])
-  (define (get-file-bytes)
-    (call/input-url (string->url url) get-pure-port port->bytes))
-  (define filename (last (string-split url "/")))
-  
-  (if (equal? filename " ")
-      #f
-      (call-with-output-file (build-path path author filename)
-        (lambda (output-port) (write-bytes (get-file-bytes) output-port))
-        #:exists 'replace)))
-
 (define (extract-full-res-urls src)
   (regexp-match* #rx"href=\"([a-zA-Z0-9:/\\.]*?)\" target=\"_blank\">View full resolution</a>" src #:match-select cadr))
 
 (define (get-author-name src)
   (second (regexp-match #rx"By <a href=\".*?\">([a-zA-Z0-9-]*?)</a>" src)))
 
-(define (create-author-directory author [path (get-download-base-path)])
-  (when (not (directory-exists? (build-path path author)))
-    (make-directory (build-path path author))))
-
 (define (download-images image-urls author path)
+
+  (define (create-author-directory)
+    (when (not (directory-exists? (build-path path author)))
+      (make-directory (build-path path author))))
+  
+  (define (download-file url)
+    (define (get-file-bytes)
+      (call/input-url (string->url url) get-pure-port port->bytes))
+    (define filename (last (string-split url "/")))
+  
+    (if (equal? filename " ")
+        #f
+        (call-with-output-file (build-path path author filename)
+          (lambda (output-port) (write-bytes (get-file-bytes) output-port))
+          #:exists 'replace)))
+
+  (create-author-directory)
   (for-each (lambda (image-url)
-              (download-file image-url author path))
+              (download-file image-url))
             image-urls))
 
 (module+ main
@@ -64,5 +66,4 @@
          [urls (extract-full-res-urls src)]
          [author (get-author-name src)])
 
-    (create-author-directory author path)
     (download-images urls author path)))
