@@ -37,16 +37,13 @@
   (define (create-directories)
     (make-directory* album-path))
 
-  ; Had a really neat (call/input-url) function here before
-  ; but 'had to' (don't know) abandon it to inspect
-  ; the headers for type information.
   (define (download-file url)
     (define (get-file-bytes+header)
-      (let* ([ip (get-impure-port (string->url url))]
-             [header (purify-port ip)]
-             [data (port->bytes ip)])
-        (close-input-port ip)
-        (values header data)))
+      (call/input-url (string->url url)
+                      get-impure-port
+                      (lambda (input-port)
+                        (let ([header (purify-port input-port)])
+                          (values header (port->bytes input-port))))))
     
     (define-values (header file-bytes) (get-file-bytes+header))
 
