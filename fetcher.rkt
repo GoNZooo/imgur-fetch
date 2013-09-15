@@ -42,7 +42,9 @@
       (call/input-url (string->url url)
                       get-impure-port
                       (lambda (input-port)
+                        ; Extract header from impure port
                         (let ([header (purify-port input-port)])
+                          ; Return header and bytes separately.
                           (values header (port->bytes input-port))))))
     
     (define-values (header file-bytes) (get-file-bytes+header))
