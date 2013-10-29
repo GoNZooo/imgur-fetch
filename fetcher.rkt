@@ -16,13 +16,13 @@
   (call/input-url (string->url url) get-pure-port port->string))
 
 (define (extract-full-res-urls src)
-  (let ([p #rx"href=\"(/download/[0-9A-Za-z]*?)\">Download full resolution</a>"])
+  (let ([p #px"href=\"(/download/\\w*?)\">Download full resolution</a>"])
     (regexp-match* p src #:match-select cadr)))
 
 ; Extract author name from source HTML.
 ; If not possible, return the empty string.
 (define (get-author-name src)
-  (let* ([p #rx"By <a href=\".*?\">([a-zA-Z0-9-]*?)</a>"]
+  (let* ([p #px"By <a href=\".*?\">([\\w-]*?)</a>"]
          [result (regexp-match p src)])
     (if (false? result)
         ""
@@ -55,22 +55,20 @@
       (define subtype
         (last (string-split (extract-field "content-type" header) "/")))
       (case subtype
-        [("jpeg") ".jpg"]
-        [("png") ".png"]
-        [("gif") ".gif"]
-        [else ".na"]))
+        [("jpeg") ".jpg"] [("png") ".png"] [("gif") ".gif"] [else ".na"]))
     
     (call-with-output-file
-        (build-path album-path (string-append base-filename (get-file-extension)))
-      (lambda (output-port) (write-bytes file-bytes output-port))
+        (build-path album-path
+                    (string-append base-filename (get-file-extension)))
+      (lambda (output-port)
+        (write-bytes file-bytes output-port))
       #:exists 'replace))
   
   (create-directories)
-  (for-each
-   (lambda (dl-url)
-     (download-file (string-append "http://imgur.com/" dl-url)))
-   image-urls)
-  
+  (for-each (lambda (dl-url)
+              (download-file (string-append "http://imgur.com/" dl-url)))
+            image-urls)
+  ; Returns album-path so we can use it in main module
   album-path)
 
 (define (get-album-name album-url)
